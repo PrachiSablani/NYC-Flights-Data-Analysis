@@ -1,0 +1,414 @@
+Exploratory data analysis on NYCFlights data
+## Setup:
+```{r Setup, message=FALSE}
+# Load standard libraries
+library("tidyverse")
+library("nycflights13")
+```
+
+## Problem 1: Exploring the NYC Flights Data
+
+### Importing and Inspecting Data: 
+
+
+```{r}
+# Importing the data from "nycflights13" package
+data(flights)
+
+# Inspecting data
+# Checking total rows and columns
+dim(flights)
+# Checking the structure of data set
+str(flights)
+# Checking the summary of data set
+summary(flights)
+# Finding the number of cases 
+nrow(flights)
+# Finding the total variables provided
+ncol(flights)
+# Checking the first few cases of the data set
+head(flights)
+# Checking the last few cases of the data set
+tail(flights)
+# Finding names of variables
+names(flights)
+# Checking missing values
+table(is.na(flights$dep_time))
+table(is.na(flights$dep_delay))
+table(is.na(flights$arr_time))
+table(is.na(flights$arr_delay))
+table(is.na(flights$air_time))
+
+# Finding mean of departure and arrival delays
+round(mean(flights$dep_delay, na.rm = TRUE), 2)
+round(mean(flights$arr_delay, na.rm = TRUE), 2)
+
+```
+<!-- Explanation of findings -->
+The 'flights' dataset is present in the 'nycflights13' package in the form of the data frame. It contains information about domestic flights from New York in 2013. Flights are departed from John F. Kennedy International (JFK), or Newark Liberty International (EWR), or LaGuardia (LGA) airports.
+The 'flights' data set contains the following variables -
+* year - year of departure of the flight <br>
+* month - month of departure of the flight
+* day - day of the month of departure
+* dep_time - actual departure time
+* sched_dep_time - scheduled departure time
+* dep_delay - delay in departure in minutes
+* arr_time - actual arrival time
+* sched_arr_time - scheduled arrival time
+* arr_delay - delay in arrival in minutes
+* carrier - contains the name of the carrier 
+* flight - flight number
+* tailnum - identification number on the tail of the flight
+* origin - origin city of the flight
+* dest - destination of the flight
+* air_time - total time spent in air
+* distance - distance between origin and destination airports
+* hour - represents hour
+* minute - represents minutes
+* time_hour - represents time and hour together
+
+On inspection of the data, following observations are made -
+1. The 'flights' dataset has 336776 rows and 19 columns
+2. The column names are - "year" ,"month", "day", "dep_time", "sched_dep_time" "dep_delay", "arr_time", "sched_arr_time" "arr_delay", "carrier","flight", "tailnum", "origin", "dest", "air_time", "distance", "hour", "minute","time_hour
+3. Departure time and departure delay time of 8255 cases are missing
+4. Arrival time of 8713 cases are missing
+5. Arrival delay of 9430 cases are missing
+6. Air time of 9430 cases are missing
+7. Mean departure delay is 12.64 mins (rounded to 2 decimal places)
+8. Mean arrival delay is 6.9 mins (rounded to 2 decimal places)
+
+## Exploratory data analysis with some questions.
+
+Question - Find detials of NYC airports included in the data like number of airports, name of airports?
+```{r}
+#Categorize the airports
+airports <- factor(flights$origin)
+# Names of airports
+levels(airports)    # EWR, JFK, and LGA
+# Total number of airports
+length(levels(airports))   # 3 airports
+```
+
+Question - Into how many airports did airlines fly from NYC
+
+```{r}
+length(unique(flights$dest)) 
+```
+Question - NUmber of flights from NYC to Seattle and Spokane
+```{r}
+#Number of flights from NYC to Seattle
+nrow(filter(flights, dest == "SEA"))     #3923 flights
+
+#Check flights from NYC to Spokane
+nrow(filter(flights, dest == "GAG")) 
+```
+Question - Find missing and invalid destination codes
+```{r}
+table(is.na(flights$dest))     
+length(grep("[[:upper:]]{3}", flights$dest))
+```
+No destination is missing and all the destinations have valid codes. However, it is surprising to find that there were no flights from NYC to Spokane in 2013. When I checked today, I found 500+ results from New York to Spokane. 
+
+Question - Worst 3 destinations in terms of delays
+```{r}
+#Flights delay by destinations.  
+flights_delay <- flights %>%
+  filter(arr_delay > 0) %>% 
+  group_by(dest) %>%
+  summarize(mean_delay=mean(arr_delay, na.rm = T)) %>%
+  arrange(desc(mean_delay))
+
+flights_delay
+head(flights_delay,3)  
+```
+The worst three destinations are TVC, TUL, and BHM.
+
+
+Question - Analyze relation of delay with seasons
+```{r}
+#Relation of departure delays with seasons
+dep_delay_months <- flights %>%
+  filter(dep_delay > 0) %>% 
+  group_by(month) %>%
+  summarize(mean_dep_delay=mean(dep_delay, na.rm = T)) %>%
+  arrange(desc(mean_dep_delay))
+
+dep_delay_months    # Tabular form
+
+#Graphical form
+ggplot(dep_delay_months, aes(x=month, y= mean_dep_delay)) + 
+  geom_line(color="Blue") +
+   xlab("Months") + ylab("Mean Departure Delay")+
+  ggtitle("Mean departure delay") + 
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=20))
+
+#Relation of arrival delays with seasons
+arr_delay_months <- flights %>%
+  filter(arr_delay > 0) %>% 
+  group_by(month) %>%
+  summarize(mean_arr_delay=mean(arr_delay, na.rm = T)) %>%
+  arrange(desc(mean_arr_delay))
+arr_delay_months   # tabular form
+
+#Graphical form
+ggplot(arr_delay_months, aes(x=month, y= mean_arr_delay)) + 
+  geom_line(color="Blue") +
+   xlab("Months") + ylab("Mean Arrival Delay")+
+  ggtitle("Mean arrival delay") + 
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=20))
+
+```
+
+Question -  Compare delays in morning and evening hours
+```{r}
+f1k <- flights %>%
+  sample_n(1000) %>%
+mutate(day = arr_time > 600 & arr_time < 1800)
+summary(f1k)
+ggplot(f1k, aes(x=day)) +
+  geom_histogram(stat = "count", color= "Blue", fill ="Red") +
+   xlab("Day Time") + ylab("Arrival Delay")+
+  ggtitle("Delays in morning and night hours") + 
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=20))
+
+```
+From first visualization, it can be observed that delays are more in july, august and december months, which is the summer and holiday season.
+
+From the visualization, it is oberved that arrival delays during day time are more as compared to night.
+
+Problem - It is difficult to guess what the 'typical delay' means. I have assumed it as mean delay and calculated the mean arrival and men departure delays. Also, departure delays of 8255 flights are missing and arrival delays of 9430 flights are missing. This might affect our current observations.
+If weather data would have been given , we could have found the reasons and patterns of dealys.
+
+Question - Considering the destination as Seattle. Find out the which month has the maximum mean departure delay and maximum mean arrival delay.
+
+This question is really interesting to explore because New York and Seattle are highly populated cities of the United States. During summer vacations and winter vacations, people love to travel to other cities. Hence, there's a high chance that the frequency of flights will be more and because of high traffic, departure delays could be more. 
+
+#Steps to answer this question
+To answer this question, I will first select some variables from the data(departure delays, arrival delays, months, destination). Then I will fliter only those cases where destination is Seattle. Then data will be grouped by months and I will find their respective means and store in a new table. Finally, I will plot two scatter plot graphs to visualize the data.
+```{r}
+
+# Checking the first few cases
+head(flights)
+
+# Selecting only relevant varibales in a new data frame
+flights1 <- select(flights, dep_delay, arr_delay, month, dest)
+# Checking first 10 cases of new data
+head(flights1,10)
+# Checking summary of new data
+summary(flights1)
+#Checking missing values of departure and arrival delays
+table(is.na(flights1$dep_delay))
+table(is.na(flights1$arr_delay))
+
+# Filter the flights with destination as Seattle, the group by months and summarize with mean departure delays
+flights_dep <- flights1 %>%
+  filter(dest=="SEA") %>%
+  group_by(month) %>%
+summarize(mean_dep_delay=mean(dep_delay, na.rm=TRUE))
+
+#Check the deatils of filghts_dep data
+nrow(flights_dep)
+head(flights_dep)
+summary(flights_dep)
+
+#Plot the graph with mean departure delay and months
+#VISUALZATION 1
+ggplot(data= flights_dep, aes(x=month, y= mean_dep_delay)) + 
+  geom_line(color="Blue") + geom_point(size=5, color ="Red") + xlab("Months") + ylab("Mean Departure Delay")+
+  ggtitle("Mean departure delay New York to Seattle") + 
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=20))
+
+# Filter the flights with destination as Seattle, the group by months and summarize with mean arrival delays
+flights_arr <- flights1 %>%
+  filter(dest=="SEA") %>%
+  group_by(month) %>%
+summarize(mean_arr_delay=mean(arr_delay, na.rm=TRUE))
+
+#Check the deatils of filghts_arr data
+nrow(flights_arr)
+head(flights_arr)
+summary(flights_arr)
+
+#Plot the graph with mean arrival delay and months
+#VISUALZATION 2
+ggplot(data= flights_arr, aes(x=month, y= mean_arr_delay)) + 
+  geom_line(color="Blue") + geom_point(size=5, color ="Red") + xlab("Months") + ylab("Mean Arrival Delay")+
+  ggtitle("Mean arrival delay New York to Seattle") + 
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=20))
+
+
+```
+
+Question - Find out the flights from New York to San Francisco that departed during the day time and has arrival delay less than one hour.
+
+This analysis is interesting as it's really helpful for someone who wants to travel only in day time and wants arrival delay less than one hour. For example, if somebody is travelling with kids or if somebody is not feeling well.
+
+#Steps to answer this question
+To answer this question, I will create a new data with destination as San Francisco. I will take the sample of only 1000 cases. First, I will check the flights that are departing in day time using different shapes for day time and night time. Then I will set the arrival delay as less than one hour and do further exploration.
+
+```{r}
+# Checking the first few cases
+head(flights)
+# Creating new data set with destination as San Francisco
+flights_sfo <- flights %>%
+   filter(dest == "SFO") %>% 
+  sample_n(1000)
+
+# Checking details of new data set
+head(flights_sfo)
+nrow(flights_sfo)
+summary(flights_sfo)
+
+
+#Checking missing values of departure and arrival delays
+table(is.na(flights_sfo$dep_delay))
+table(is.na(flights_sfo$arr_delay))
+
+# Plotting Graph for flights from New York to San Francisco, giving different shapes for day and night flights
+# VISUALZATION 1
+ggplot(flights_sfo, aes(x=dep_delay, y=arr_delay, shape= dep_time > 600 & dep_time < 1800)) +
+  geom_point(na.rm=TRUE, col = "DarkGreen", alpha=0.5) +
+   xlab("Departure Delay") + ylab("Arrival Delay") +
+  ggtitle("Flights from New York to SFO") +
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=30))
+
+# Applying more fliters to the previous data set
+flights_sfo2 <- flights_sfo %>%
+   filter(arr_delay < 120)
+
+# Checking details of new data set
+dim(flights_sfo2)
+head(flights_sfo2)
+nrow(flights_sfo2)
+summary(flights_sfo2)
+
+# Plotting Graph for flights from New York to San Francisco with arrival time less than one hour
+# VISUALZATION 2
+ggplot(flights_sfo2, aes(x=dep_delay, y=arr_delay, shape= dep_time > 600 & dep_time < 1800)) +
+  geom_point(na.rm=TRUE, col = "DarkGreen", alpha=0.5) +
+   xlab("Departure Delay") + ylab("Arrival Delay") +
+  ggtitle("Flights from New York to SFO") +
+  theme(axis.title.x = element_text(color="DarkGreen", size=20),
+        axis.title.y = element_text(color="Red", size=20),
+        axis.text.x = element_text(size=10),
+        axis.text.y = element_text(size=10),
+        plot.title = element_text(color="Dark Blue", size=30))
+```
+
+<!-- Visualizations of Question 1 -->
+ 
+     Visualization 1 -  Mean Departure Delay from New York to Seattle
+From the graph, it is observed that the maximum mean departure delay was in the month of July(19.4) and then in une(18.4), and it is quite possible because of the beginning of summers. Similary, it can be observed that the mean delay of December(17) month is also high.
+
+Visualization 2 - Mean Arrival Delay from New York to Seattle
+From the graph, it is observed that the maximum mean arrival delay was in the month of July(11.8) and then in December(11.4), because of the summer and festive season. Also, the mean delay of June(9.17) month is also high.
+Additionally, it can be observed that the mean arrival delays in Febuary, March, May, August, September, October and November months are negative. That means most of the flights during these months reached before time.
+
+<!-- Visualizations of Question 2 -->
+Visualization 1 - This shows the day time and night time flights from New York to SFO with different shapes and orgaised by their departure delays and arrival delays.
+
+Visualization 2 - It ca be observed that for most of the flights having arrival delay less than 50mins, departure delay is also less than 50 mins. Hence, these flights will be really good fit for some passengers.
+
+### Challenges in the Results: ##### 
+
+<!-- Challenges of Question 1 --> 
+Question 1 - The fact that delays are expected to be high in summer and vacation months was clearly visible in the visualizations. 
+However, as found in the exploratory analysis, departure delays of 19 cases are missing and arrival delays of 38 cases are missing. If these missing values are extreme cases then it will definitely affect the current analysis. Hence, there's no guarantee that my current analysis is 100% correct.
+
+<!-- Challenges of Question 2 -->
+Question 2 - We were able to get a rough idea about the day and night times of flights. Also, setting the arrival delay less than one hour showed some impressive results.
+However, as found in the exploratory analysis, departure delays of 6 cases are missing and arrival delays of 9 cases are missing in the sample of 1000. In the complete data set many more details will be missing. Hence, the plot might not show the accurate results.
+
+
+# Let's fly to Portland
+```{r}
+# 1. Number of flights from NYC to Portland
+flights_portland <- filter(flights, dest == "PDX")
+nrow(flights_portland)     # 1354 flights
+
+# 2. Number of airlines fly from NYC to Portland
+length(unique(flights_portland$carrier))   # 3 airlines
+
+# 3. Name of airlines and how many times each of them flew from to portland
+unique(flights_portland$carrier)   # DL, UA and B6
+
+carrier_portland <- flights_portland %>%
+   group_by(carrier) %>%
+   summarize(length(flight))
+
+head(carrier_portland)   # B6 - 325, DL - 458, UA - 571
+
+# 4. Unquie flights from NYC to PDX
+length(unique(flights_portland$tailnum))  #492
+
+# 5. Number of airplanes arrived from each airport
+
+ flights_airport <- flights_portland %>%
+   group_by(factor(origin)) %>%
+   summarize(length(unique(tailnum)))
+ 
+ head(flights_airport)  # 297 from EWR and 195 from JFK
+ 
+# 6. Percentage of flights having departure delay more than 15 mins
+flights1 <- flights_portland %>%
+   filter(dep_delay > 15)
+nrow(flights1)
+
+ perc <- round(nrow(flights1) / nrow(flights_portland) * 100,2)
+ perc      # 26.66 %
+ 
+# 7. 
+ flights2 <- flights_portland %>%
+   filter(dep_delay > 15) %>%
+   filter(origin == "EWR")
+ nrow(flights2)     # 168 flights
+ #finding percentage
+ perc1 <- round(nrow(flights2) / nrow(flights_portland) * 100,2)
+ perc1
+ 
+ flights3 <- flights_portland %>%
+   filter(dep_delay > 15) %>%
+   filter(origin == "JFK")
+ nrow(flights3)    # 193 flights
+ #finding percentage
+ perc2 <- round(nrow(flights3) / nrow(flights_portland) * 100,2)
+ perc2
+```
+
+
+
+
+Finally, discussing the issues I found in the data -
+** Issues with the data **
+Arrival time of 8713 flights are missing, arrival delay of 9430 flights are missing. Similarly, departure time and delay of 8255 flights are missing. These missing values can significantly affect out current observations. Hence, the data given is not 100% accurate. Also, data of the flights from New York to Spokane is missing.
+
+I believe there could be other factors that affect the delays of the flights. For example, weather and holiday season. Since no information about weather is provided, we can't conclude the reason of delays of the flights.
+
+As discussed in class, the departure delays is also affected by the external factors like the infrastructure of the airport. If the facilities and infrastructure at one origin aiport is way better than others, then it will probably experience less departure delays as compared to others. We should consider all these factors before concluding anything.
+
+Some questions are meaningful and can be answered while some questions can't be answered accurately because of the missing data and missing external information.
+
