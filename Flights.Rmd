@@ -333,7 +333,7 @@ Visualization 1 - This shows the day time and night time flights from New York t
 
 Visualization 2 - It ca be observed that for most of the flights having arrival delay less than 50mins, departure delay is also less than 50 mins. Hence, these flights will be really good fit for some passengers.
 
-### Challenges in the Results: ##### 
+### Challenges in the Results: ###
 
 <!-- Challenges of Question 1 --> 
 Question 1 - The fact that delays are expected to be high in summer and vacation months was clearly visible in the visualizations. 
@@ -380,28 +380,7 @@ nrow(flights1)
 
  perc <- round(nrow(flights1) / nrow(flights_portland) * 100,2)
  perc      # 26.66 %
- 
-# 7. 
- flights2 <- flights_portland %>%
-   filter(dep_delay > 15) %>%
-   filter(origin == "EWR")
- nrow(flights2)     # 168 flights
- #finding percentage
- perc1 <- round(nrow(flights2) / nrow(flights_portland) * 100,2)
- perc1
- 
- flights3 <- flights_portland %>%
-   filter(dep_delay > 15) %>%
-   filter(origin == "JFK")
- nrow(flights3)    # 193 flights
- #finding percentage
- perc2 <- round(nrow(flights3) / nrow(flights_portland) * 100,2)
- perc2
 ```
-
-
-
-
 Finally, discussing the issues I found in the data -
 ** Issues with the data **
 Arrival time of 8713 flights are missing, arrival delay of 9430 flights are missing. Similarly, departure time and delay of 8255 flights are missing. These missing values can significantly affect out current observations. Hence, the data given is not 100% accurate. Also, data of the flights from New York to Spokane is missing.
@@ -412,3 +391,4 @@ As discussed in class, the departure delays is also affected by the external fac
 
 Some questions are meaningful and can be answered while some questions can't be answered accurately because of the missing data and missing external information.
 
+### End of project ###
